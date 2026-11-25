@@ -59,6 +59,7 @@ function mergeStates(local, remote) {
   out.notes = mergeMap(local.notes, remote.notes);
   out.days = mergeMap(local.days, remote.days);
   out.classes = mergeMap(local.classes, remote.classes);
+  out.imports = mergeMap(local.imports, remote.imports);
   out.todos = mergeList(local.todos, remote.todos);
   out.homework = mergeList(local.homework, remote.homework);
   out.savedAt = local.savedAt;
@@ -80,7 +81,7 @@ function mergeList(local = [], remote = []) {
   return [...m.values()];
 }
 
-const fingerprint = (s) => JSON.stringify([s.mode, s.setup, s.colours, s.notes, s.todos, s.homework || [], s.days || {}, s.classes || {}]);
+const fingerprint = (s) => JSON.stringify([s.mode, s.setup, s.colours, s.notes, s.todos, s.homework || [], s.days || {}, s.classes || {}, s.imports || {}]);
 
 // ---------- syncing ----------
 async function syncNow() {

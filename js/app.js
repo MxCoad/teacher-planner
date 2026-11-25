@@ -1,4 +1,5 @@
-// Prototype P3: classroom workflow (copy and push plans, disrupted days, homework).
+// Prototype P4: import a scheme of work (import.js).
+// P3: classroom workflow (copy and push plans, disrupted days, homework).
 // P2 added sign-in, sync between devices, and lesson links.
 
 let state = loadState();
@@ -82,8 +83,9 @@ const lessonKey = (date, period) => `${iso(date)}_${period.id}`;
 function lessonContent(name, date, period) {
   const note = state.notes[lessonKey(date, period)] || {};
   if (state.mode !== "demo") {
-    return { title: note.title || "", unit: "", number: 0, of: 0 };
+    return { title: note.title || "", unit: note.unit || "", number: 0, of: 0 };
   }
+  if (note.unit) return { title: note.title || "", unit: note.unit, number: 0, of: 0 };
   const unit = UNITS[name] || { unit: "Unit not set yet", lessons: ["Lesson"] };
   const start = validIso(setup().start) ? mondayOf(parseIso(setup().start)) : parseIso(TERM_START_FALLBACK);
   const weekIdx = Math.max(0, Math.round((mondayOf(date) - start) / (7 * 864e5)));
@@ -336,7 +338,7 @@ function renderLesson(dateStr, periodId) {
         <p class="eyebrow"><a href="#/class/${encodeURIComponent(name)}">${esc(name)}</a> · ${esc(shortDate(d))} · ${esc(p.label)} ${esc(p.start)}–${esc(p.end)}${s.room ? ` · Room ${esc(s.room)}` : ""}</p>
         <h1>${c.title ? esc(c.title) : "Plan this lesson"}</h1>
         ${note.moved ? `<p class="warn">This lesson's plan was moved on (${esc(note.moved)}). Anything you plan here stays here.</p>` : ""}
-        ${c.unit ? `<p class="muted">${esc(c.unit)}, lesson ${c.number} of ${c.of}</p>` : ""}
+        ${c.unit ? `<p class="muted">${esc(c.unit)}${c.of ? `, lesson ${c.number} of ${c.of}` : ""}</p>` : ""}
       </div>
       <a class="btn ghost" href="#/today/${iso(d)}">Back to day</a>
     </header>
@@ -389,7 +391,7 @@ function renderClasses() {
   }).join("");
   view.innerHTML = `
     <header class="pagehead"><div><p class="eyebrow">Classes</p><h1>Your classes</h1></div></header>
-    <p class="muted">Classes come from your timetable. Pupil lists arrive later, after you've checked with your Data Protection Officer.</p>
+    <p class="muted">Classes come from your timetable. Pupil lists arrive later, after you've checked with your Data Protection Officer. To fill a class's lessons from a scheme of work, open the class and choose Import scheme of work.</p>
     ${names.length ? `<div class="classgrid">${cards}</div>` : `<div class="empty"><p>No classes on your timetable yet.</p><a class="btn" href="#/setup">Add them in Setup</a></div>`}`;
   setActiveNav("classes");
 }
@@ -416,7 +418,7 @@ function renderClass(name) {
   view.innerHTML = `
     <header class="pagehead lessonhead" style="--c:${colourFor(name)}">
       <div><p class="eyebrow"><a href="#/classes">Classes</a></p><h1>${esc(name)}</h1><p class="muted">Last week to four weeks ahead</p></div>
-      <button class="btn ghost" data-action="roll-open">Roll lessons on</button>
+      <span class="btnrow"><a class="btn ghost" href="#/import/${encodeURIComponent(name)}">Import scheme of work</a><button class="btn ghost" data-action="roll-open">Roll lessons on</button></span>
     </header>
     ${rollPanel(name)}
     <div class="classcols">
@@ -462,6 +464,7 @@ function route() {
     case "lesson": return renderLesson(a, b);
     case "classes": return renderClasses();
     case "class": return renderClass(a);
+    case "import": return renderImport(a);
     case "todo": return renderTodo();
     case "homework": return renderHomework(a);
     case "setup": return renderSetup();
@@ -508,7 +511,7 @@ function handleUpload(file, statusEl) {
         toast("Backup restored.");
       } else {
         const mine = state.mode === "mine";
-        state = { ...freshState(), ...(mine ? { todos: state.todos, notes: state.notes, homework: state.homework, days: state.days, classes: state.classes } : {}), mode: "mine", setup: res.setup, stamps: { setup: Date.now() } };
+        state = { ...freshState(), ...(mine ? { todos: state.todos, notes: state.notes, homework: state.homework, days: state.days, classes: state.classes, imports: state.imports } : {}), mode: "mine", setup: res.setup, stamps: { setup: Date.now() } };
         save();
         go("#/today");
         toast(`Imported ${res.setup.patterns.length} day pattern${res.setup.patterns.length === 1 ? "" : "s"} and ${classNames().length} classes.`);
@@ -529,6 +532,7 @@ document.addEventListener("click", (e) => {
     if (act === "start-demo") return startDemo();
     if (act === "start-blank") return startBlank();
     if (handleWorkflowAction(act, a)) return;
+    if (handleImportAction(act, a)) return;
     if (handleSetupAction(act, a)) return;
     handleAccountAction(act);
     return;
@@ -566,6 +570,7 @@ document.addEventListener("change", (e) => {
     return;
   }
   if (handleWorkflowChange(el)) return;
+  if (handleImportChange(el)) return;
   handleSetupChange(el);
 });
 
