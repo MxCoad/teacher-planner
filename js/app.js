@@ -1,4 +1,5 @@
-// Prototype P2: sign-in, sync between devices, and lesson links.
+// Prototype P3: classroom workflow (copy and push plans, disrupted days, homework).
+// P2 added sign-in, sync between devices, and lesson links.
 
 let state = loadState();
 const setup = () => state.setup;
@@ -81,7 +82,7 @@ const lessonKey = (date, period) => `${iso(date)}_${period.id}`;
 function lessonContent(name, date, period) {
   const note = state.notes[lessonKey(date, period)] || {};
   if (state.mode !== "demo") {
-    return { title: note.title || "", unit: "", number: 0, of: 0, hasHomework: false };
+    return { title: note.title || "", unit: "", number: 0, of: 0 };
   }
   const unit = UNITS[name] || { unit: "Unit not set yet", lessons: ["Lesson"] };
   const start = validIso(setup().start) ? mondayOf(parseIso(setup().start)) : parseIso(TERM_START_FALLBACK);
@@ -91,11 +92,10 @@ function lessonContent(name, date, period) {
   const pos = inWeek.findIndex((l) => iso(l.date) === iso(date) && l.period.id === period.id);
   const n = weekIdx * perWeek + Math.max(0, pos);
   return {
-    title: note.title || unit.lessons[n % unit.lessons.length],
+    title: note.title ?? (note.moved ? "" : unit.lessons[n % unit.lessons.length]),
     unit: unit.unit,
     number: (n % unit.lessons.length) + 1,
     of: unit.lessons.length,
-    hasHomework: n % 3 === 1,
   };
 }
 
@@ -104,12 +104,15 @@ const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const view = $("#view");
 
-function toast(msg) {
+// A short message at the bottom of the screen, optionally with an Undo button.
+function toast(msg, undo) {
   const t = $("#toast");
-  t.textContent = msg;
+  t.innerHTML = `<span>${esc(msg)}</span>${undo ? `<button type="button" class="undo">Undo</button>` : ""}`;
+  t.classList.toggle("has-undo", !!undo);
+  if (undo) t.querySelector(".undo").onclick = () => { t.classList.remove("show"); undo(); };
   t.classList.add("show");
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => t.classList.remove("show"), 3600);
+  toast._t = setTimeout(() => t.classList.remove("show"), undo ? 10000 : 3600);
 }
 
 function setActiveNav(name) {
@@ -196,15 +199,21 @@ function renderToday(dateStr) {
       const time = `<span class="time">${esc(p.start)}<br><span class="muted">${esc(p.end)}</span></span>`;
       if (s) {
         const name = s.subject.trim();
+        const key = lessonKey(d, p);
+        const note = state.notes[key] || {};
         const c = lessonContent(name, d, p);
-        const nLinks = ((state.notes[lessonKey(d, p)] || {}).links || []).length;
-        const meta = [p.label, c.unit && `${c.unit} ${c.number}/${c.of}`, nLinks && `${nLinks} link${nLinks === 1 ? "" : "s"}`].filter(Boolean).map(esc).join(" · ");
-        return `<a class="slot lesson ${now ? "now" : ""}" href="#/lesson/${iso(d)}/${encodeURIComponent(p.id)}" style="--c:${colourFor(name)}">
+        const nLinks = (note.links || []).length;
+        const meta = [p.label, !note.moved && c.unit && `${c.unit} ${c.number}/${c.of}`, nLinks && `${nLinks} link${nLinks === 1 ? "" : "s"}`].filter(Boolean).map(esc).join(" · ");
+        const due = hwList().filter((h) => h.dueKey === key);
+        const setHere = hwList().filter((h) => h.setKey === key);
+        const hw = [due.length && `<span class="hw">Homework due (${due.map((h) => `${handedCount(h)}/${classSize(h.cls)}`).join(", ")})</span>`, setHere.length && `Homework set`].filter(Boolean).join(" · ");
+        const title = c.title ? esc(c.title) : note.moved ? `Moved on: ${esc(note.moved)}` : "No plan yet";
+        return `<a class="slot lesson ${now ? "now" : ""} ${note.moved && !c.title ? "moved" : ""}" href="#/lesson/${iso(d)}/${encodeURIComponent(p.id)}" style="--c:${colourFor(name)}">
           ${time}
           <span class="card">
             <span class="row1"><span class="cls">${esc(name)}</span><span class="room">${esc(s.room || "")}</span></span>
-            <span class="title ${c.title ? "" : "muted"}">${c.title ? esc(c.title) : "No plan yet"}</span>
-            <span class="meta">${meta}${c.hasHomework ? ` · <span class="hw">Homework due</span>` : ""}</span>
+            <span class="title ${c.title ? "" : "muted"}">${title}</span>
+            <span class="meta">${meta}${hw ? ` · ${hw}` : ""}</span>
           </span>
           ${now ? `<span class="nowtag">Now</span>` : ""}
         </a>`;
@@ -213,6 +222,7 @@ function renderToday(dateStr) {
       return `<div class="slot free ${now ? "now" : ""}">${time}<span class="card"><span class="cls">${esc(p.label)}</span><span class="meta">Free period</span></span></div>`;
     }).join("");
     const todayTodos = state.todos.filter((t) => t.when === "today" && !t.done && !t.deleted);
+    const dueToday = hwList().filter((h) => !h.closed && hwDue(h) === iso(d));
     body = `
       <div class="daygrid">
         <section class="timeline" aria-label="Lessons">${items}</section>
@@ -222,11 +232,8 @@ function renderToday(dateStr) {
             ${todayTodos.length ? `<ul class="mini">${todayTodos.map((t) => `<li>${esc(t.text)}</li>`).join("")}</ul>` : `<p class="muted">Nothing left for today.</p>`}
             <a href="#/todo" class="link">All tasks</a>
           </div>
-          <div class="panel">
-            <h3>Day pattern</h3>
-            <p>${esc(pat.name)}</p>
-            <button class="btn ghost" data-mock="disrupt">Mark this day as disrupted</button>
-          </div>
+          ${dueToday.length ? `<div class="panel"><h3>Homework due</h3><div class="hwmini">${dueToday.map(hwCard).join("")}</div></div>` : ""}
+          ${disruptPanel(d, pat)}
         </aside>
       </div>`;
   }
@@ -243,6 +250,7 @@ function renderToday(dateStr) {
         <a class="btn ghost" href="#/today/${iso(next)}" aria-label="Next day">›</a>
       </nav>
     </header>
+    ${off ? "" : disruptNotice(d)}
     ${body}`;
   setActiveNav("today");
 }
@@ -253,7 +261,7 @@ function renderWeek(dateStr) {
   const days = [0, 1, 2, 3, 4].map((i) => addDays(mon, i));
   const labels = [];
   for (const pat of setup().patterns) for (const p of pat.periods) if (!isBreak(p) && !labels.includes(p.label)) labels.push(p.label);
-  const head = days.map((d) => `<th class="${iso(d) === iso(today()) ? "is-today" : ""}"><a href="#/today/${iso(d)}">${esc(DAY_SHORT[dow(d)])} <span>${d.getDate()} ${MONTHS[d.getMonth()]}</span></a></th>`).join("");
+  const head = days.map((d) => `<th class="${iso(d) === iso(today()) ? "is-today" : ""}"><a href="#/today/${iso(d)}">${esc(DAY_SHORT[dow(d)])} <span>${d.getDate()} ${MONTHS[d.getMonth()]}</span>${dayInfo(d) ? `<em class="dis">${esc(dayInfo(d).reason || "Disrupted")}</em>` : ""}</a></th>`).join("");
   const rows = labels.map((label, ri) => {
     const cells = days.map((d) => {
       const off = dayOff(d);
@@ -265,10 +273,11 @@ function renderWeek(dateStr) {
       if (!s) return `<td class="freecell"><span class="t">${esc(p.start)}</span></td>`;
       const name = s.subject.trim();
       const c = lessonContent(name, d, p);
-      return `<td><a class="wk" href="#/lesson/${iso(d)}/${encodeURIComponent(p.id)}" style="--c:${colourFor(name)}">
+      const moved = (state.notes[lessonKey(d, p)] || {}).moved;
+      return `<td><a class="wk ${moved && !c.title ? "moved" : ""}" href="#/lesson/${iso(d)}/${encodeURIComponent(p.id)}" style="--c:${colourFor(name)}">
         <span class="t">${esc(p.start)}${s.room ? ` · ${esc(s.room)}` : ""}</span>
         <span class="cls">${esc(name)}</span>
-        ${c.title ? `<span class="title">${esc(c.title)}</span>` : ""}
+        ${c.title ? `<span class="title">${esc(c.title)}</span>` : moved ? `<span class="title muted">Moved on</span>` : ""}
       </a></td>`;
     }).join("");
     return `<tr><th scope="row">${esc(label)}</th>${cells}</tr>`;
@@ -315,12 +324,18 @@ function renderLesson(dateStr, periodId) {
   const key = lessonKey(d, p);
   const note = state.notes[key] || {};
   const demo = state.mode === "demo";
-  const plan = note.plan ?? (demo ? `Starter (10 min): recap last lesson with three quick questions.\nMain (35 min): ${c.title}: demo, then paired practice.\nPlenary (10 min): exit ticket on mini whiteboards.` : "");
+  const plan = note.plan ?? (demo && !note.moved ? demoPlan(c.title) : "");
+  const here = { date: d, period: p, key, cls: name };
+  const others = classNames().map((n) => {
+    const ls = classLessonsFrom(n, d, 12).filter((x) => x.key !== key && (n !== name || isAfter(x, d, p))).slice(0, 8);
+    return ls.length ? `<optgroup label="${esc(n)}">${ls.map((x) => `<option value="${esc(x.key)}">${esc(n)} · ${esc(lessonLabel(x))}${isEmptyPlan(planOf(x)) ? "" : " (has a plan)"}</option>`).join("")}</optgroup>` : "";
+  }).join("");
   view.innerHTML = `
     <header class="pagehead lessonhead" style="--c:${colourFor(name)}">
       <div>
         <p class="eyebrow"><a href="#/class/${encodeURIComponent(name)}">${esc(name)}</a> · ${esc(shortDate(d))} · ${esc(p.label)} ${esc(p.start)}–${esc(p.end)}${s.room ? ` · Room ${esc(s.room)}` : ""}</p>
         <h1>${c.title ? esc(c.title) : "Plan this lesson"}</h1>
+        ${note.moved ? `<p class="warn">This lesson's plan was moved on (${esc(note.moved)}). Anything you plan here stays here.</p>` : ""}
         ${c.unit ? `<p class="muted">${esc(c.unit)}, lesson ${c.number} of ${c.of}</p>` : ""}
       </div>
       <a class="btn ghost" href="#/today/${iso(d)}">Back to day</a>
@@ -328,8 +343,8 @@ function renderLesson(dateStr, periodId) {
     <div class="lessongrid">
       <section class="panel">
         <h3>Lesson plan</h3>
-        <label class="field"><span>Title</span><input data-note="${esc(key)}" data-field="title" value="${esc(note.title ?? (demo ? c.title : ""))}" placeholder="What is this lesson about?" /></label>
-        <label class="field"><span>Plan</span><textarea rows="8" data-note="${esc(key)}" data-field="plan" placeholder="Starter, main, plenary...">${esc(plan)}</textarea></label>
+        <label class="field"><span>Title</span><input data-note="${esc(key)}" data-cls="${esc(name)}" data-field="title" value="${esc(note.title ?? (demo ? c.title : ""))}" placeholder="What is this lesson about?" /></label>
+        <label class="field"><span>Plan</span><textarea rows="8" data-note="${esc(key)}" data-cls="${esc(name)}" data-field="plan" placeholder="Starter, main, plenary...">${esc(plan)}</textarea></label>
         <p class="muted small" id="savedNote">Saved as you type.</p>
       </section>
       <aside>
@@ -339,20 +354,19 @@ function renderLesson(dateStr, periodId) {
             const k = linkKind(l.url);
             return `<li><a href="${esc(l.url)}" target="_blank" rel="noopener"><span class="ico ${k.cls}">${k.icon}</span><span class="ltext">${esc(l.label || k.name)}</span></a><button class="x" data-link-del="${i}" data-key="${esc(key)}" aria-label="Remove link">×</button></li>`;
           }).join("")}</ul>` : `<p class="muted">No links yet. Paste a Google Slides, Docs or Drive link, or any web address.</p>`}
-          <form class="linkform" data-link="${esc(key)}">
+          <form class="linkform" data-link="${esc(key)}" data-cls="${esc(name)}">
             <input name="url" type="url" inputmode="url" placeholder="Paste a link" aria-label="Link address" required />
             <input name="label" placeholder="Name (optional)" aria-label="Link name" />
             <button class="btn ghost">Add link</button>
           </form>
         </section>
-        <section class="panel">
-          <h3>Homework</h3>
-          ${c.hasHomework ? `<p>Due today: practice questions on the last lesson.</p>` : `<p class="muted">None set for this lesson.</p>`}
-          <button class="btn ghost" data-mock="homework">Set homework</button>
-        </section>
+        ${homeworkPanel(here)}
         <section class="panel actions">
-          <button class="btn" data-mock="copy">Copy to another class</button>
-          <button class="btn ghost" data-mock="push">Push to the next lesson</button>
+          <h3>Move or reuse this plan</h3>
+          ${others ? `<label class="field"><span>Copy this plan to</span><select id="copyTarget">${others}</select></label>
+          <button class="btn" data-action="copy" data-key="${esc(key)}">Copy plan</button>` : ""}
+          <button class="btn ghost" data-action="push-on" data-key="${esc(key)}">Push on to the next lesson</button>
+          <p class="muted small">Pushing on moves this plan, and the ones after it, on by one lesson of ${esc(name)}. Both can be undone.</p>
         </section>
       </aside>
     </div>`;
@@ -382,24 +396,43 @@ function renderClasses() {
 
 function renderClass(name) {
   const start = mondayOf(today());
+  const openHw = hwList().filter((h) => h.cls === name && !h.closed).sort((a, b) => hwDue(a).localeCompare(hwDue(b)));
   const rows = [];
   for (let w = -1; w < 4; w++) {
     for (const l of lessonsInWeek(name, addDays(start, 7 * w))) {
       const c = lessonContent(name, l.date, l.period);
       const past = l.date < today();
+      const key = lessonKey(l.date, l.period);
+      const moved = (state.notes[key] || {}).moved;
+      const due = hwList().filter((h) => h.dueKey === key).length;
+      const meta = [!moved && c.of && `${c.number}/${c.of}`, due && "homework due", past && "taught"].filter(Boolean).join(" · ");
       rows.push(`<li class="${past ? "past" : ""}"><a href="#/lesson/${iso(l.date)}/${encodeURIComponent(l.period.id)}">
         <span class="when">${esc(shortDate(l.date))} · ${esc(l.period.label)}</span>
-        <span class="title ${c.title ? "" : "muted"}">${c.title ? esc(c.title) : "No plan yet"}</span>
-        <span class="meta">${c.of ? `${c.number}/${c.of}` : ""}${past ? " · taught" : ""}</span>
+        <span class="title ${c.title ? "" : "muted"}">${c.title ? esc(c.title) : moved ? `Moved on: ${esc(moved)}` : "No plan yet"}</span>
+        <span class="meta">${esc(meta)}</span>
       </a></li>`);
     }
   }
   view.innerHTML = `
     <header class="pagehead lessonhead" style="--c:${colourFor(name)}">
       <div><p class="eyebrow"><a href="#/classes">Classes</a></p><h1>${esc(name)}</h1><p class="muted">Last week to four weeks ahead</p></div>
-      <button class="btn ghost" data-mock="roll">Roll lessons on</button>
+      <button class="btn ghost" data-action="roll-open">Roll lessons on</button>
     </header>
-    <ol class="lessonlist">${rows.join("") || `<li class="muted">No lessons in these weeks.</li>`}</ol>`;
+    ${rollPanel(name)}
+    <div class="classcols">
+      <ol class="lessonlist">${rows.join("") || `<li class="muted">No lessons in these weeks.</li>`}</ol>
+      <aside>
+        <section class="panel">
+          <h3>Homework</h3>
+          ${openHw.length ? `<div class="hwmini">${openHw.map(hwCard).join("")}</div>` : `<p class="muted">No open homework. Set it from a lesson.</p>`}
+        </section>
+        <section class="panel">
+          <h3>Class size</h3>
+          <label class="field"><span>Pupils (for hand-in ticks)</span><input type="number" min="1" max="60" data-class-size="${esc(name)}" value="${classSize(name)}" /></label>
+          <p class="muted small">Ticks use register numbers, so no names are stored.</p>
+        </section>
+      </aside>
+    </div>`;
   setActiveNav("classes");
 }
 
@@ -430,6 +463,7 @@ function route() {
     case "classes": return renderClasses();
     case "class": return renderClass(a);
     case "todo": return renderTodo();
+    case "homework": return renderHomework(a);
     case "setup": return renderSetup();
     case "account": return renderAccount(a);
     default: return renderToday(page === "today" ? a : undefined);
@@ -473,9 +507,8 @@ function handleUpload(file, statusEl) {
         go("#/today");
         toast("Backup restored.");
       } else {
-        const keepTodos = state.mode === "mine" ? state.todos : [];
-        const keepNotes = state.mode === "mine" ? state.notes : {};
-        state = { ...freshState(), mode: "mine", setup: res.setup, todos: keepTodos, notes: keepNotes, stamps: { setup: Date.now() } };
+        const mine = state.mode === "mine";
+        state = { ...freshState(), ...(mine ? { todos: state.todos, notes: state.notes, homework: state.homework, days: state.days, classes: state.classes } : {}), mode: "mine", setup: res.setup, stamps: { setup: Date.now() } };
         save();
         go("#/today");
         toast(`Imported ${res.setup.patterns.length} day pattern${res.setup.patterns.length === 1 ? "" : "s"} and ${classNames().length} classes.`);
@@ -488,22 +521,14 @@ function handleUpload(file, statusEl) {
 }
 
 // ---------- events ----------
-const MOCKS = {
-  disrupt: "In P3, this pushes today's untaught lessons on by one slot, with undo.",
-  homework: "In P3, homework goes on the calendar with a tick list for hand-ins.",
-  copy: "In P3, this copies the plan to another class.",
-  push: "In P3, this moves this plan and the ones after it on by one lesson.",
-  roll: "In P3, this rolls lessons on to next term or next year.",
-};
-
 document.addEventListener("click", (e) => {
-  const m = e.target.closest("[data-mock]");
-  if (m) { toast(MOCKS[m.dataset.mock] || "Coming in a later prototype."); return; }
+  if (handleWorkflowClick(e)) return;
   const a = e.target.closest("[data-action]");
   if (a) {
     const act = a.dataset.action;
     if (act === "start-demo") return startDemo();
     if (act === "start-blank") return startBlank();
+    if (handleWorkflowAction(act, a)) return;
     if (handleSetupAction(act, a)) return;
     handleAccountAction(act);
     return;
@@ -511,7 +536,12 @@ document.addEventListener("click", (e) => {
   const ld = e.target.closest("[data-link-del]");
   if (ld) {
     const n = state.notes[ld.dataset.key];
-    if (n && n.links) { n.links.splice(Number(ld.dataset.linkDel), 1); n.t = Date.now(); save(); route(); }
+    if (n && n.links) {
+      const removed = n.links.splice(Number(ld.dataset.linkDel), 1)[0];
+      const i = Number(ld.dataset.linkDel);
+      n.t = Date.now(); save(); route();
+      toast("Link removed.", () => { n.links.splice(i, 0, removed); n.t = Date.now(); save(); route(); });
+    }
     return;
   }
   const del = e.target.closest("[data-todo-del]");
@@ -535,6 +565,7 @@ document.addEventListener("change", (e) => {
     el.value = "";
     return;
   }
+  if (handleWorkflowChange(el)) return;
   handleSetupChange(el);
 });
 
@@ -544,6 +575,7 @@ document.addEventListener("input", (e) => {
   if (!el.dataset.note) return;
   const n = (state.notes[el.dataset.note] ||= {});
   n[el.dataset.field] = el.value;
+  if (el.dataset.cls) n.cls = el.dataset.cls;
   n.t = Date.now();
   clearTimeout(noteTimer);
   noteTimer = setTimeout(() => {
@@ -556,6 +588,7 @@ document.addEventListener("input", (e) => {
 document.addEventListener("submit", (e) => {
   const auth = e.target.closest("[data-auth]");
   if (auth) { e.preventDefault(); handleAuthSubmit(auth, e.submitter); return; }
+  if (handleWorkflowSubmit(e)) return;
   const lf = e.target.closest("[data-link]");
   if (lf) {
     e.preventDefault();
@@ -564,6 +597,7 @@ document.addEventListener("submit", (e) => {
     try { new URL(url); } catch { toast("That doesn't look like a web address."); return; }
     const n = (state.notes[lf.dataset.link] ||= {});
     (n.links ||= []).push({ url, label: lf.label.value.trim() });
+    if (lf.dataset.cls) n.cls = lf.dataset.cls;
     n.t = Date.now();
     save();
     route();

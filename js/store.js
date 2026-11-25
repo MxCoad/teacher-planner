@@ -25,7 +25,7 @@ function demoSetup() {
 }
 
 function freshState() {
-  return { version: 1, mode: "new", setup: blankSetup(), colours: {}, notes: {}, todos: [], stamps: {}, savedAt: null };
+  return { version: 1, mode: "new", setup: blankSetup(), colours: {}, notes: {}, todos: [], homework: [], days: {}, classes: {}, stamps: {}, savedAt: null };
 }
 
 function loadState() {
