@@ -1,7 +1,7 @@
-// Offline cache for the P0 mock-up: serve from the network when online,
+// Offline cache for the planner: serve from the network when online,
 // fall back to the cached copy when offline.
-const CACHE = "planner-p0-v1";
-const FILES = ["./", "index.html", "css/app.css", "js/data.js", "js/app.js", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png"];
+const CACHE = "planner-p1-v1";
+const FILES = ["./", "index.html", "css/app.css", "js/data.js", "js/store.js", "js/setup.js", "js/app.js", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
