@@ -101,9 +101,11 @@ async function syncNow() {
     }
     sync.status = "synced";
     sync.lastSynced = new Date();
+    sync.lastError = "";
   } catch (err) {
     console.warn("Sync failed", err);
     sync.status = navigator.onLine ? "error" : "offline";
+    sync.lastError = [err && err.code, err && err.message].filter(Boolean).join(": ") || String(err);
   } finally {
     sync.running = false;
     renderBanner();
@@ -171,6 +173,7 @@ function renderAccount(sub) {
       <h3>Signed in</h3>
       <p>${esc(u.email)}</p>
       <p class="muted">${esc(syncLabel())}</p>
+      ${sync.status === "error" && sync.lastError ? `<p class="small errtext">Reason: ${esc(sync.lastError)}</p>` : ""}
       <div class="btnrow">
         <button class="btn" data-action="sync-now">Sync now</button>
         <button class="btn ghost" data-action="sign-out">Sign out</button>
@@ -233,6 +236,7 @@ function friendlyAuthError(err) {
   if (/invalid login/i.test(m)) return "That email and password don't match.";
   if (/email not confirmed/i.test(m)) return "Confirm your email first: check your inbox for the link.";
   if (/already registered/i.test(m)) return "There's already an account with that email. Sign in instead.";
+  if (/rate limit/i.test(m)) return "Supabase has sent too many emails this hour. Try again later, or create the user in the Supabase dashboard with Auto Confirm ticked.";
   if (/failed to fetch|network/i.test(m)) return "Couldn't reach the server. Check your connection, or whether the school network blocks it.";
   return m || "Something went wrong. Try again.";
 }

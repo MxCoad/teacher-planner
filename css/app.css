@@ -330,3 +330,4 @@ input[type="date"], input[type="time"], .hrow input, .prow input, .patname, .ttg
 .linkform { display: grid; gap: 6px; margin-top: 8px; }
 .linkform input { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; min-width: 0; }
 @media (max-width: 760px) { .nav a { font-size: 0.62rem; } }
+.errtext { color: #b91c1c; overflow-wrap: anywhere; }

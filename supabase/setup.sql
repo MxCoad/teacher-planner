@@ -10,6 +10,10 @@ create table if not exists public.planner_state (
 
 alter table public.planner_state enable row level security;
 
+-- Newer projects don't give signed-in users access to new tables automatically.
+-- Row-level security below still limits each user to their own row.
+grant select, insert, update, delete on table public.planner_state to authenticated;
+
 drop policy if exists "Read own planner" on public.planner_state;
 create policy "Read own planner" on public.planner_state
   for select to authenticated using ((select auth.uid()) = user_id);
@@ -25,3 +29,6 @@ create policy "Update own planner" on public.planner_state
 drop policy if exists "Delete own planner" on public.planner_state;
 create policy "Delete own planner" on public.planner_state
   for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- Make the API notice the new table straight away.
+notify pgrst, 'reload schema';
