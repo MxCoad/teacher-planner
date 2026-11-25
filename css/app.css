@@ -267,3 +267,52 @@ h2.sub { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 @media (max-width: 760px) { #toast { bottom: 84px; } }
+
+/* ---------- P1: welcome, setup, saving ---------- */
+h4 { font-size: 0.85rem; margin: 16px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.banner a { color: inherit; font-weight: 600; }
+.lead { font-size: 1.05rem; max-width: 640px; }
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 20px; }
+.choices .panel + .panel { margin-top: 0; }
+.choice { display: flex; flex-direction: column; align-items: flex-start; }
+.choice p { flex: 1; margin-top: 0; }
+.offlabel { font-size: 1.2rem; font-weight: 600; color: var(--ink); }
+.week td.off { background: repeating-linear-gradient(45deg, transparent 0 8px, color-mix(in srgb, var(--line) 60%, transparent) 8px 9px); text-align: center; vertical-align: middle; color: var(--muted); font-size: 0.85rem; }
+.week td.off span { writing-mode: vertical-rl; transform: rotate(180deg); }
+.btn.small { min-height: 30px; padding: 4px 10px; font-size: 0.85rem; }
+.btn.danger { color: #b91c1c; }
+@media (prefers-color-scheme: dark) { .btn.danger { color: #f87171; } }
+.btnrow { display: flex; flex-wrap: wrap; gap: 8px; }
+.x { border: 0; background: transparent; color: var(--muted); font-size: 1.2rem; line-height: 1; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+.x:hover { background: var(--bg); color: var(--ink); }
+.warn { color: var(--now); }
+input[type="date"], input[type="time"], .hrow input, .prow input, .patname, .ttgrid input {
+  font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; min-width: 0;
+}
+.termrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 240px)); gap: 12px; }
+.termrow .field input { width: 100%; }
+.hrow { display: grid; grid-template-columns: minmax(0, 1fr) 150px 150px 32px; gap: 6px; margin-bottom: 6px; }
+@media (max-width: 600px) { .hrow { grid-template-columns: 1fr 1fr 32px; } .hrow input:first-child { grid-column: 1 / -1; } }
+.pattern { margin-bottom: 12px; }
+.pathead { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.patname { font-weight: 600; font-size: 1.05rem; flex: 1; max-width: 360px; }
+.days { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin: 10px 0 4px; }
+.daychk { display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
+.pcols { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 1000px) { .pcols { grid-template-columns: 1fr; } }
+.prow { display: grid; grid-template-columns: minmax(0, 1fr) 92px 92px 32px; gap: 6px; margin-bottom: 6px; align-items: center; }
+.prow.head { font-size: 0.75rem; color: var(--muted); margin-bottom: 2px; }
+.prow.bad input[type="time"] { border-color: #dc2626; }
+.gridwrap { overflow-x: auto; min-width: 0; }
+.ttgrid { border-collapse: collapse; width: 100%; min-width: 520px; }
+.ttgrid th, .ttgrid td { border-bottom: 1px solid var(--line); padding: 4px; text-align: left; vertical-align: top; }
+.ttgrid thead th { font-size: 0.8rem; color: var(--muted); }
+.ttgrid tbody th { font-size: 0.8rem; font-weight: 600; white-space: nowrap; padding-right: 8px; }
+.ttgrid tbody th span { display: block; font-weight: 400; color: var(--muted); }
+.ttgrid td input { width: 100%; display: block; font-size: 0.85rem; padding: 4px 6px; }
+.ttgrid td input.room { margin-top: 3px; font-size: 0.75rem; color: var(--muted); }
+.ttgrid tr.brk th { color: var(--muted); font-weight: 400; font-style: italic; }
+.colours { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.colrow { display: flex; align-items: center; gap: 8px; }
+.colrow input { width: 36px; height: 28px; border: 1px solid var(--line); border-radius: 6px; padding: 0; background: none; cursor: pointer; }
+.todo li { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }

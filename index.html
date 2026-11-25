@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Teacher Planner (P0 mock-up)</title>
-  <meta name="description" content="A timetable-driven planner for teachers. Prototype P0: clickable mock-up." />
+  <title>Teacher Planner</title>
+  <meta name="description" content="A timetable-driven planner for teachers. Prototype P1: timetable core." />
   <meta name="theme-color" content="#1f3a5f" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="css/app.css" />
 </head>
 <body>
-  <div class="banner" role="note">Prototype P0: a clickable mock-up with demo classes. Nothing is saved.</div>
+  <div class="banner" id="banner" role="note">Prototype P1</div>
   <div class="shell">
     <nav class="nav" aria-label="Main">
       <div class="brand"><img src="icons/icon.svg" alt="" width="28" height="28" /> <span>Planner</span></div>
@@ -26,6 +26,8 @@
   </div>
   <div id="toast" role="status" aria-live="polite"></div>
   <script src="js/data.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/setup.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

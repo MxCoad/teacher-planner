@@ -4,18 +4,19 @@ A timetable-driven planner for teachers that runs in the browser on a phone, lap
 
 Built in Rapid Application Development cycles: each prototype is used in real school weeks and reviewed before the next one starts.
 
-## Prototype P0: clickable mock-up
+## Prototype P1: timetable core (current)
 
-P0 shows the main screens with demo classes and real bell times, so the layout can be judged on each device. Nothing is saved.
+Your timetable, term dates, lesson plans and tasks are saved in the browser on the device you use. Syncing between devices arrives in P2.
 
-- **Today**: the day's lessons, registration, break and lunch in time order, with the current lesson highlighted
-- **Week**: days across, periods down; Monday and Friday follow a different bell pattern to Tuesday to Thursday
-- **Lesson**: plan, Google Slides, Docs and Drive links, homework
-- **Classes**: each class's lessons in order
-- **To do**: tasks grouped by today, this week, this month and someday
-- **Setup**: the day patterns, plus import of a `timetable-setup.json` saved from the [Timetable to Calendar](https://mxcoad.github.io/timetable-to-calendar.html) tool
+- **Welcome**: import a `timetable-setup.json` saved from the [Timetable to Calendar](https://mxcoad.github.io/timetable-to-calendar.html) tool, start from scratch, or try demo data
+- **Setup**: first and last day of teaching, holidays and days off, day patterns (which weekdays use which bell times), bell times, the timetable grid with class and room, and class colours
+- **Today and Week**: built from the timetable; weekends, holidays and days outside term show as days off
+- **Lesson**: a title and plan for each lesson, saved as you type
+- **Classes**: every lesson of a class from last week to four weeks ahead
+- **To do**: tasks saved on the device
+- **Backup**: download everything as one file, and restore it with Import
 
-Buttons for later features (disrupted day, copy lesson, set homework) explain which prototype brings them.
+P0 (the clickable mock-up) is in the history of this repository.
 
 ## Running it
 
