@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Teacher Planner (P0 mock-up)</title>
+  <meta name="description" content="A timetable-driven planner for teachers. Prototype P0: clickable mock-up." />
+  <meta name="theme-color" content="#1f3a5f" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <div class="banner" role="note">Prototype P0: a clickable mock-up with demo classes. Nothing is saved.</div>
+  <div class="shell">
+    <nav class="nav" aria-label="Main">
+      <div class="brand"><img src="icons/icon.svg" alt="" width="28" height="28" /> <span>Planner</span></div>
+      <a href="#/today" data-nav="today"><span class="i">◷</span><span>Today</span></a>
+      <a href="#/week" data-nav="week"><span class="i">▦</span><span>Week</span></a>
+      <a href="#/classes" data-nav="classes"><span class="i">◎</span><span>Classes</span></a>
+      <a href="#/todo" data-nav="todo"><span class="i">✓</span><span>To do</span></a>
+      <a href="#/setup" data-nav="setup"><span class="i">⚙</span><span>Setup</span></a>
+    </nav>
+    <main id="view" tabindex="-1"></main>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
