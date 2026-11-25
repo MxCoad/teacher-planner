@@ -7,7 +7,8 @@ Built in Rapid Application Development cycles: each prototype is used in real sc
 ## Prototype P4: import a scheme of work (current)
 
 - Open a class and choose **Import scheme of work**.
-- Copy the table from Word, Excel, Google Sheets or Google Docs and paste it in, or upload a .csv file. Hyperlinks in the table come across as lesson links.
+- Copy the table from Word, Excel, Google Sheets or Google Docs and paste it in, upload a .csv or saved web page, or fetch a web page by its address (pages on the planner's own site, such as the KS3 curriculum page, always work). Hyperlinks come across as lesson links.
+- Three layouts: one row per lesson; a delivery calendar with one row per week and lessons across the columns (pick which side-by-side calendar to use); or a curriculum document with a numbered list of lessons under each unit heading (pick which units).
 - Say what each column holds (lesson title, plan, links, homework, unit). The app guesses from the headings.
 - Pick the first lesson date, how many lessons each row fills, and whether to keep or replace lessons that already have a plan.
 - The preview shows which lesson each row lands in. Weekends, holidays, disrupted days and lessons already pushed on are skipped; rows like "Half term" are left out.

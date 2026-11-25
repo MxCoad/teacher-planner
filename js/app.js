@@ -594,6 +594,7 @@ document.addEventListener("submit", (e) => {
   const auth = e.target.closest("[data-auth]");
   if (auth) { e.preventDefault(); handleAuthSubmit(auth, e.submitter); return; }
   if (handleWorkflowSubmit(e)) return;
+  if (handleImportSubmit(e)) return;
   const lf = e.target.closest("[data-link]");
   if (lf) {
     e.preventDefault();
