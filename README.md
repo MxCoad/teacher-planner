@@ -4,7 +4,18 @@ A timetable-driven planner for teachers that runs in the browser on a phone, lap
 
 Built in Rapid Application Development cycles: each prototype is used in real school weeks and reviewed before the next one starts.
 
-## Prototype P3: classroom workflow (current)
+## Prototype P4: import a scheme of work (current)
+
+- Open a class and choose **Import scheme of work**.
+- Copy the table from Word, Excel, Google Sheets or Google Docs and paste it in, upload a .csv or saved web page, or fetch a web page by its address (pages on the planner's own site, such as the KS3 curriculum page, always work). Hyperlinks come across as lesson links.
+- Three layouts: one row per lesson; a delivery calendar with one row per week and lessons across the columns (pick which side-by-side calendar to use); or a curriculum document with a numbered list of lessons under each unit heading (pick which units).
+- Say what each column holds (lesson title, plan, links, homework, unit). The app guesses from the headings.
+- Pick the first lesson date, how many lessons each row fills, and whether to keep or replace lessons that already have a plan.
+- The preview shows which lesson each row lands in. Weekends, holidays, disrupted days and lessons already pushed on are skipped; rows like "Half term" are left out.
+- Homework in a row is set in that lesson and due the next lesson (or a few lessons later).
+- Every import can be undone from the same page later, on any signed-in device.
+
+## Prototype P3: classroom workflow
 
 - **Copy a plan** to another lesson of any class from the lesson page (title, plan and links)
 - **Push on**: move a plan to the class's next lesson; the plans after it move on too, until a lesson with no plan takes up the slack

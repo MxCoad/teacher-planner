@@ -368,3 +368,25 @@ input[type="date"], input[type="time"], .hrow input, .prow input, .patname, .ttg
 .actions h3 { margin-bottom: 0; }
 .actions .field { margin-bottom: 0; }
 @media (max-width: 760px) { .nav a { font-size: 0.58rem; padding: 6px 2px; } }
+
+/* ---------- P4: import a scheme of work ---------- */
+.sowsrc textarea { width: 100%; font: inherit; color: inherit; background: var(--bg); border: 1px dashed var(--muted); border-radius: 8px; padding: 10px; margin: 6px 0 10px; resize: vertical; }
+.sowsrc label.btn { cursor: pointer; }
+.panel + .panel { margin-top: 16px; }
+.inline { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; cursor: pointer; }
+.sowcols { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0 12px; }
+.sowcols .field em { display: block; margin-top: 4px; font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sowprev { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 0.9rem; }
+.sowprev th { text-align: left; font-size: 0.75rem; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.sowprev td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+.sowprev td.when { white-space: nowrap; }
+.sowprev tr.off td { opacity: 0.5; }
+.sowprev input { width: 16px; height: 16px; accent-color: var(--accent); }
+.improw { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pagehead .btnrow { justify-content: flex-end; }
+.urlform { display: flex; gap: 8px; margin-bottom: 10px; }
+.urlform input { flex: 1; min-width: 0; font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.linkbtn { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; }
+.unitchecks { columns: 2 260px; }
+.unitchecks li { break-inside: avoid; }
+.panel details summary { cursor: pointer; color: var(--muted); margin-bottom: 8px; }
