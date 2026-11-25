@@ -1,4 +1,4 @@
-// Prototype P1: timetable core, saved on this device.
+// Prototype P2: sign-in, sync between devices, and lesson links.
 
 let state = loadState();
 const setup = () => state.setup;
@@ -118,13 +118,19 @@ function setActiveNav(name) {
 
 function renderBanner() {
   const b = $("#banner");
+  const label = syncLabel();
   if (state.mode === "demo") {
-    b.innerHTML = `Prototype P1 · You're looking at demo data. <a href="#/setup">Use your own timetable</a>`;
+    b.innerHTML = `Demo data, not synced. <a href="#/setup">Use your own timetable</a>`;
+  } else if (state.mode === "mine" && sync.status === "signed-out") {
+    b.innerHTML = `Saved on this device. <a href="#/account">Sign in</a> to sync your other devices.`;
+  } else if (state.mode === "mine" && label) {
+    b.textContent = label;
   } else if (state.mode === "mine") {
-    b.textContent = "Prototype P1 · Saved on this device only. Syncing between devices comes in P2.";
+    b.textContent = "Saved on this device.";
   } else {
-    b.textContent = "Prototype P1";
+    b.textContent = "Teacher Planner";
   }
+  b.dataset.status = state.mode === "mine" ? sync.status : "";
 }
 
 function download(filename, text) {
@@ -140,7 +146,7 @@ function download(filename, text) {
 function renderWelcome() {
   view.innerHTML = `
     <header class="pagehead"><div><p class="eyebrow">Welcome</p><h1>Let's set up your timetable</h1></div></header>
-    <p class="lead">Set your timetable up once, and the day and week views build themselves from it. Everything is saved in this browser on this device.</p>
+    <p class="lead">Set your timetable up once, and the day and week views build themselves from it. Sign in to keep it in step on your phone, laptop and school PC.</p>
     <div class="choices">
       <section class="panel choice">
         <h3>Import from Timetable to Calendar</h3>
@@ -157,6 +163,11 @@ function renderWelcome() {
         <p>Load demo classes with real bell times. You can switch to your own timetable from Setup at any time.</p>
         <button class="btn ghost" data-action="start-demo">Try demo data</button>
       </section>
+      ${syncConfigured() ? `<section class="panel choice">
+        <h3>Already set up on another device?</h3>
+        <p>Sign in and your planner comes down from your account.</p>
+        <a class="btn ghost" href="#/account">Sign in</a>
+      </section>` : ""}
     </div>
     <p class="status" id="uploadStatus"></p>`;
   setActiveNav("");
@@ -186,7 +197,8 @@ function renderToday(dateStr) {
       if (s) {
         const name = s.subject.trim();
         const c = lessonContent(name, d, p);
-        const meta = [p.label, c.unit && `${c.unit} ${c.number}/${c.of}`].filter(Boolean).map(esc).join(" · ");
+        const nLinks = ((state.notes[lessonKey(d, p)] || {}).links || []).length;
+        const meta = [p.label, c.unit && `${c.unit} ${c.number}/${c.of}`, nLinks && `${nLinks} link${nLinks === 1 ? "" : "s"}`].filter(Boolean).map(esc).join(" · ");
         return `<a class="slot lesson ${now ? "now" : ""}" href="#/lesson/${iso(d)}/${encodeURIComponent(p.id)}" style="--c:${colourFor(name)}">
           ${time}
           <span class="card">
@@ -200,7 +212,7 @@ function renderToday(dateStr) {
       if (isBreak(p) || /reg/i.test(p.label)) return `<div class="slot divider ${now ? "now" : ""}">${time}<span class="label">${esc(p.label)}</span></div>`;
       return `<div class="slot free ${now ? "now" : ""}">${time}<span class="card"><span class="cls">${esc(p.label)}</span><span class="meta">Free period</span></span></div>`;
     }).join("");
-    const todayTodos = state.todos.filter((t) => t.when === "today" && !t.done);
+    const todayTodos = state.todos.filter((t) => t.when === "today" && !t.done && !t.deleted);
     body = `
       <div class="daygrid">
         <section class="timeline" aria-label="Lessons">${items}</section>
@@ -279,6 +291,19 @@ function renderWeek(dateStr) {
 }
 
 // ---------- lesson ----------
+function linkKind(url) {
+  let h = "", path = "";
+  try { const u = new URL(url); h = u.hostname; path = u.pathname; } catch {}
+  if (h === "docs.google.com" && path.startsWith("/presentation")) return { cls: "slides", icon: "▣", name: "Google Slides" };
+  if (h === "docs.google.com" && path.startsWith("/spreadsheets")) return { cls: "sheets", icon: "▦", name: "Google Sheets" };
+  if (h === "docs.google.com" && path.startsWith("/forms")) return { cls: "forms", icon: "☰", name: "Google Form" };
+  if (h === "docs.google.com") return { cls: "docs", icon: "≡", name: "Google Doc" };
+  if (h === "drive.google.com") return { cls: "drive", icon: "▲", name: "Google Drive" };
+  if (h === "classroom.google.com") return { cls: "drive", icon: "◆", name: "Google Classroom" };
+  if (/(^|\.)youtube\.com$|^youtu\.be$/.test(h)) return { cls: "yt", icon: "▶", name: "YouTube" };
+  return { cls: "web", icon: "↗", name: h || "Link" };
+}
+
 function renderLesson(dateStr, periodId) {
   const d = validIso(dateStr) ? parseIso(dateStr) : today();
   const pat = patternFor(d);
@@ -305,16 +330,20 @@ function renderLesson(dateStr, periodId) {
         <h3>Lesson plan</h3>
         <label class="field"><span>Title</span><input data-note="${esc(key)}" data-field="title" value="${esc(note.title ?? (demo ? c.title : ""))}" placeholder="What is this lesson about?" /></label>
         <label class="field"><span>Plan</span><textarea rows="8" data-note="${esc(key)}" data-field="plan" placeholder="Starter, main, plenary...">${esc(plan)}</textarea></label>
-        <p class="muted small" id="savedNote">Saved on this device as you type.</p>
+        <p class="muted small" id="savedNote">Saved as you type.</p>
       </section>
       <aside>
         <section class="panel">
           <h3>Resources</h3>
-          ${demo ? `<ul class="links">
-            <li><a href="https://slides.google.com" target="_blank" rel="noopener"><span class="ico slides">▣</span>${esc(c.title)}: slides</a></li>
-            <li><a href="https://docs.google.com" target="_blank" rel="noopener"><span class="ico docs">≡</span>${esc(c.title)}: worksheet</a></li>
-          </ul>` : `<p class="muted">No links yet.</p>`}
-          <button class="btn ghost" data-mock="link">Add a link</button>
+          ${(note.links || []).length ? `<ul class="links">${note.links.map((l, i) => {
+            const k = linkKind(l.url);
+            return `<li><a href="${esc(l.url)}" target="_blank" rel="noopener"><span class="ico ${k.cls}">${k.icon}</span><span class="ltext">${esc(l.label || k.name)}</span></a><button class="x" data-link-del="${i}" data-key="${esc(key)}" aria-label="Remove link">×</button></li>`;
+          }).join("")}</ul>` : `<p class="muted">No links yet. Paste a Google Slides, Docs or Drive link, or any web address.</p>`}
+          <form class="linkform" data-link="${esc(key)}">
+            <input name="url" type="url" inputmode="url" placeholder="Paste a link" aria-label="Link address" required />
+            <input name="label" placeholder="Name (optional)" aria-label="Link name" />
+            <button class="btn ghost">Add link</button>
+          </form>
         </section>
         <section class="panel">
           <h3>Homework</h3>
@@ -378,7 +407,7 @@ function renderClass(name) {
 const GROUPS = [["today", "Today"], ["week", "This week"], ["month", "This month"], ["someday", "Someday"]];
 function renderTodo() {
   const groups = GROUPS.map(([k, label]) => {
-    const items = state.todos.filter((t) => t.when === k);
+    const items = state.todos.filter((t) => t.when === k && !t.deleted);
     return `<section class="panel todo">
       <h3>${label}</h3>
       <ul>${items.map((t) => `<li><label><input type="checkbox" data-todo="${t.id}" ${t.done ? "checked" : ""}/> <span>${esc(t.text)}</span></label><button class="x" data-todo-del="${t.id}" aria-label="Delete task">×</button></li>`).join("") || `<li class="muted">Nothing here.</li>`}</ul>
@@ -394,7 +423,7 @@ function route() {
   renderBanner();
   const parts = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
   const [page, a, b] = parts;
-  if (state.mode === "new" && page !== "setup") return renderWelcome();
+  if (state.mode === "new" && page !== "setup" && page !== "account") return renderWelcome();
   switch (page) {
     case "week": return renderWeek(a);
     case "lesson": return renderLesson(a, b);
@@ -402,6 +431,7 @@ function route() {
     case "class": return renderClass(a);
     case "todo": return renderTodo();
     case "setup": return renderSetup();
+    case "account": return renderAccount(a);
     default: return renderToday(page === "today" ? a : undefined);
   }
 }
@@ -418,7 +448,7 @@ function blankPattern() {
 function newId() { return Math.random().toString(36).slice(2, 9); }
 
 function startDemo() {
-  state = { ...freshState(), mode: "demo", setup: demoSetup(), todos: structuredClone(TODOS_SEED) };
+  state = { ...freshState(), mode: "demo", setup: demoSetup(), todos: structuredClone(TODOS_SEED), stamps: { setup: Date.now() } };
   save();
   go("#/today");
   toast("Demo data loaded. Switch to your own timetable from Setup.");
@@ -426,7 +456,7 @@ function startDemo() {
 function startBlank() {
   const t = today();
   const year = t.getMonth() >= 7 ? t.getFullYear() : t.getFullYear() - 1;
-  state = { ...freshState(), mode: "mine", setup: { start: `${year}-09-01`, end: `${year + 1}-07-20`, patterns: [blankPattern()], holidays: [] } };
+  state = { ...freshState(), mode: "mine", setup: { start: `${year}-09-01`, end: `${year + 1}-07-20`, patterns: [blankPattern()], holidays: [] }, stamps: { setup: Date.now() } };
   save();
   go("#/setup");
   toast("Set your bell times, then type your classes into the grid.");
@@ -445,7 +475,7 @@ function handleUpload(file, statusEl) {
       } else {
         const keepTodos = state.mode === "mine" ? state.todos : [];
         const keepNotes = state.mode === "mine" ? state.notes : {};
-        state = { ...freshState(), mode: "mine", setup: res.setup, todos: keepTodos, notes: keepNotes };
+        state = { ...freshState(), mode: "mine", setup: res.setup, todos: keepTodos, notes: keepNotes, stamps: { setup: Date.now() } };
         save();
         go("#/today");
         toast(`Imported ${res.setup.patterns.length} day pattern${res.setup.patterns.length === 1 ? "" : "s"} and ${classNames().length} classes.`);
@@ -460,7 +490,6 @@ function handleUpload(file, statusEl) {
 // ---------- events ----------
 const MOCKS = {
   disrupt: "In P3, this pushes today's untaught lessons on by one slot, with undo.",
-  link: "In P2, you'll paste any Google Drive, Docs or Slides link here.",
   homework: "In P3, homework goes on the calendar with a tick list for hand-ins.",
   copy: "In P3, this copies the plan to another class.",
   push: "In P3, this moves this plan and the ones after it on by one lesson.",
@@ -476,10 +505,19 @@ document.addEventListener("click", (e) => {
     if (act === "start-demo") return startDemo();
     if (act === "start-blank") return startBlank();
     if (handleSetupAction(act, a)) return;
+    handleAccountAction(act);
+    return;
+  }
+  const ld = e.target.closest("[data-link-del]");
+  if (ld) {
+    const n = state.notes[ld.dataset.key];
+    if (n && n.links) { n.links.splice(Number(ld.dataset.linkDel), 1); n.t = Date.now(); save(); route(); }
+    return;
   }
   const del = e.target.closest("[data-todo-del]");
   if (del) {
-    state.todos = state.todos.filter((t) => String(t.id) !== del.dataset.todoDel);
+    const t = state.todos.find((x) => String(x.id) === del.dataset.todoDel);
+    if (t) { t.deleted = true; t.t = Date.now(); }
     save();
     renderTodo();
   }
@@ -489,7 +527,7 @@ document.addEventListener("change", (e) => {
   const el = e.target;
   if (el.dataset.todo) {
     const t = state.todos.find((x) => String(x.id) === el.dataset.todo);
-    if (t) { t.done = el.checked; save(); }
+    if (t) { t.done = el.checked; t.t = Date.now(); save(); }
     return;
   }
   if (el.matches("[data-upload]")) {
@@ -506,22 +544,38 @@ document.addEventListener("input", (e) => {
   if (!el.dataset.note) return;
   const n = (state.notes[el.dataset.note] ||= {});
   n[el.dataset.field] = el.value;
+  n.t = Date.now();
   clearTimeout(noteTimer);
   noteTimer = setTimeout(() => {
     save();
     const s = $("#savedNote");
-    if (s) s.textContent = `Saved on this device at ${new Date().toTimeString().slice(0, 5)}.`;
+    if (s) s.textContent = `Saved at ${new Date().toTimeString().slice(0, 5)}.`;
   }, 400);
 });
 
 document.addEventListener("submit", (e) => {
+  const auth = e.target.closest("[data-auth]");
+  if (auth) { e.preventDefault(); handleAuthSubmit(auth, e.submitter); return; }
+  const lf = e.target.closest("[data-link]");
+  if (lf) {
+    e.preventDefault();
+    let url = lf.url.value.trim();
+    if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+    try { new URL(url); } catch { toast("That doesn't look like a web address."); return; }
+    const n = (state.notes[lf.dataset.link] ||= {});
+    (n.links ||= []).push({ url, label: lf.label.value.trim() });
+    n.t = Date.now();
+    save();
+    route();
+    return;
+  }
   const f = e.target.closest("[data-add]");
   if (!f) return;
   e.preventDefault();
   const input = f.querySelector("input");
   const text = input.value.trim();
   if (!text) return;
-  state.todos.push({ id: Date.now(), text, when: f.dataset.add, done: false });
+  state.todos.push({ id: Date.now(), text, when: f.dataset.add, done: false, t: Date.now() });
   save();
   renderTodo();
   const again = document.querySelector(`[data-add="${f.dataset.add}"] input`);
@@ -529,6 +583,7 @@ document.addEventListener("submit", (e) => {
 });
 
 window.addEventListener("hashchange", () => { route(); window.scrollTo(0, 0); });
+initSync();
 route();
 
 if ("serviceWorker" in navigator) {
