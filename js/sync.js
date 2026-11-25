@@ -1,9 +1,10 @@
-// Sign-in and sync through Supabase (P2).
+// Sign-in and sync through Supabase (P2, extended in P3 for homework,
+// disrupted days and class sizes).
 //
 // The device copy (localStorage) is always written first, so the planner works
 // offline. When signed in and online, the device copy and the server copy are
-// merged: for each lesson note, each task and the setup as a whole, the most
-// recent edit wins. Demo data is never uploaded.
+// merged: for each lesson note, task, homework, disrupted day, class and the
+// setup as a whole, the most recent edit wins. Demo data is never uploaded.
 
 const sync = {
   client: null,
@@ -55,18 +56,31 @@ function mergeStates(local, remote) {
   out.colours = setupFrom.colours || {};
   out.stamps = { ...(local.stamps || {}), ...(remote.stamps || {}), setup: Math.max(lt, rt) };
 
-  out.notes = { ...(remote.notes || {}) };
-  for (const [k, v] of Object.entries(local.notes || {})) out.notes[k] = out.notes[k] ? newer(v, out.notes[k]) : v;
-
-  const todos = new Map();
-  for (const t of remote.todos || []) todos.set(String(t.id), t);
-  for (const t of local.todos || []) { const r = todos.get(String(t.id)); todos.set(String(t.id), r ? newer(t, r) : t); }
-  out.todos = [...todos.values()];
+  out.notes = mergeMap(local.notes, remote.notes);
+  out.days = mergeMap(local.days, remote.days);
+  out.classes = mergeMap(local.classes, remote.classes);
+  out.todos = mergeList(local.todos, remote.todos);
+  out.homework = mergeList(local.homework, remote.homework);
   out.savedAt = local.savedAt;
   return out;
 }
 
-const fingerprint = (s) => JSON.stringify([s.mode, s.setup, s.colours, s.notes, s.todos]);
+// Objects keyed by name: newest entry per key wins.
+function mergeMap(local = {}, remote = {}) {
+  const out = { ...remote };
+  for (const [k, v] of Object.entries(local)) out[k] = out[k] ? newer(v, out[k]) : v;
+  return out;
+}
+
+// Lists of items with an id: newest item per id wins.
+function mergeList(local = [], remote = []) {
+  const m = new Map();
+  for (const t of remote) m.set(String(t.id), t);
+  for (const t of local) { const r = m.get(String(t.id)); m.set(String(t.id), r ? newer(t, r) : t); }
+  return [...m.values()];
+}
+
+const fingerprint = (s) => JSON.stringify([s.mode, s.setup, s.colours, s.notes, s.todos, s.homework || [], s.days || {}, s.classes || {}]);
 
 // ---------- syncing ----------
 async function syncNow() {

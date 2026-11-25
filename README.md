@@ -4,7 +4,17 @@ A timetable-driven planner for teachers that runs in the browser on a phone, lap
 
 Built in Rapid Application Development cycles: each prototype is used in real school weeks and reviewed before the next one starts.
 
-## Prototype P2: sign-in, sync and links (current)
+## Prototype P3: classroom workflow (current)
+
+- **Copy a plan** to another lesson of any class from the lesson page (title, plan and links)
+- **Push on**: move a plan to the class's next lesson; the plans after it move on too, until a lesson with no plan takes up the slack
+- **Disrupted day**: on the day view, say what's happening (mock exams, trip, snow day), tick the lessons you'll lose, and they all push on. The day is labelled on the day and week views
+- **Roll lessons on**: on a class page, copy every planned lesson in a date range, in order, into a class's lessons from a start date (next year, or a parallel class)
+- **Undo**: every copy, push, disruption and roll offers Undo, and undo syncs too
+- **Homework**: set it in a lesson, due in a later lesson of that class. Tick hand-ins by register number (no names stored), see "x of y handed in" on the day view, and mark it finished when you stop chasing
+- Homework, disrupted days and class sizes sync like everything else; the server needs no changes
+
+## Prototype P2: sign-in, sync and links
 
 - **Account**: sign in with email and password on each device; the planner syncs between them
 - **Works offline**: every change is saved on the device first and synced when you're back online; for each lesson note, task and the setup, the most recent edit wins
