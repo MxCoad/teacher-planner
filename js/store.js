@@ -1,5 +1,5 @@
 // Saves the planner on this device (browser localStorage).
-// P2 replaces this with an account that syncs between devices.
+// When signed in, sync.js merges this copy with the server copy.
 
 const STORE_KEY = "planner.v1";
 
@@ -25,7 +25,7 @@ function demoSetup() {
 }
 
 function freshState() {
-  return { version: 1, mode: "new", setup: blankSetup(), colours: {}, notes: {}, todos: [], savedAt: null };
+  return { version: 1, mode: "new", setup: blankSetup(), colours: {}, notes: {}, todos: [], stamps: {}, savedAt: null };
 }
 
 function loadState() {
@@ -40,7 +40,8 @@ function loadState() {
 }
 
 let saveWarned = false;
-function saveState(state) {
+function saveState(state, opts = {}) {
+  if (!opts.quiet && typeof scheduleSync === "function") scheduleSync();
   try {
     state.savedAt = new Date().toISOString();
     localStorage.setItem(STORE_KEY, JSON.stringify(state));

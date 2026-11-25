@@ -70,7 +70,7 @@ function renderSetup() {
       <h3>Your data</h3>
       ${state.mode === "demo"
         ? `<p>You're using <b>demo data</b>. Import your own timetable to replace it, or start from scratch.</p>`
-        : `<p>Saved in this browser on this device${state.savedAt ? `, last at ${esc(new Date(state.savedAt).toTimeString().slice(0, 5))}` : ""}. Download a backup now and then, until syncing arrives in P2.</p>`}
+        : `<p>Saved on this device${state.savedAt ? `, last at ${esc(new Date(state.savedAt).toTimeString().slice(0, 5))}` : ""}. ${sync.user ? `Synced to your account (${esc(sync.user.email)}).` : syncConfigured() ? `<a href="#/account">Sign in</a> to sync it to your other devices.` : ""}</p>`}
       <div class="btnrow">
         <label class="btn">Import a file<input type="file" accept=".json,application/json" data-upload hidden /></label>
         ${state.mode === "demo" ? `<button class="btn ghost" data-action="start-blank">Start from scratch</button>` : `<button class="btn ghost" data-action="backup">Download backup</button>`}
@@ -101,7 +101,8 @@ function renderSetup() {
   window.scrollTo(0, keepScroll);
 }
 
-function rerenderSetup() { save(); renderSetup(); }
+function saveSetup() { state.stamps = { ...(state.stamps || {}), setup: Date.now() }; save(); }
+function rerenderSetup() { saveSetup(); renderSetup(); }
 
 function handleSetupAction(act, el) {
   const s = setup();
@@ -155,9 +156,9 @@ function handleSetupAction(act, el) {
 function handleSetupChange(el) {
   const s = setup();
   const d = el.dataset;
-  if (d.term) { s[d.term] = el.value; save(); return; }
-  if (d.hol !== undefined) { s.holidays[Number(d.hol)][d.field] = el.value; save(); return; }
-  if (d.pat !== undefined && d.field) { s.patterns[Number(d.pat)][d.field] = el.value; save(); return; }
+  if (d.term) { s[d.term] = el.value; saveSetup(); return; }
+  if (d.hol !== undefined) { s.holidays[Number(d.hol)][d.field] = el.value; saveSetup(); return; }
+  if (d.pat !== undefined && d.field) { s.patterns[Number(d.pat)][d.field] = el.value; saveSetup(); return; }
   if (d.patDay !== undefined) {
     const day = Number(el.value);
     const pat = s.patterns[Number(d.patDay)];
@@ -190,10 +191,10 @@ function handleSetupChange(el) {
       const roomInput = el.parentElement.querySelector(".room");
       if (roomInput && c.room) roomInput.value = c.room;
     }
-    save();
+    saveSetup();
     const dl = $("#classList");
     if (dl) dl.innerHTML = classNames().map((n) => `<option value="${esc(n)}">`).join("");
     return;
   }
-  if (d.colour) { state.colours[d.colour] = el.value; save(); return; }
+  if (d.colour) { state.colours[d.colour] = el.value; saveSetup(); return; }
 }

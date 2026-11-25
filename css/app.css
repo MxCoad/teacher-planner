@@ -316,3 +316,17 @@ input[type="date"], input[type="time"], .hrow input, .prow input, .patname, .ttg
 .colrow { display: flex; align-items: center; gap: 8px; }
 .colrow input { width: 36px; height: 28px; border: 1px solid var(--line); border-radius: 6px; padding: 0; background: none; cursor: pointer; }
 .todo li { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+
+/* ---------- P2: account, sync, links ---------- */
+.banner[data-status="offline"], .banner[data-status="error"] { background: #92400e; color: #fff; }
+.panel.narrow { max-width: 560px; }
+.links li { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--line); }
+.links li a { flex: 1; border-bottom: 0; min-width: 0; }
+.ltext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ico.sheets { background: #15803d; }
+.ico.forms { background: #7c3aed; }
+.ico.yt { background: #dc2626; }
+.ico.web { background: #475569; }
+.linkform { display: grid; gap: 6px; margin-top: 8px; }
+.linkform input { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; min-width: 0; }
+@media (max-width: 760px) { .nav a { font-size: 0.62rem; } }
